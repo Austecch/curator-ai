@@ -9,7 +9,7 @@ export async function POST(request: Request) {
     
     if (!apiKey) {
       return NextResponse.json(
-        { error: "Anthropic API key not configured" },
+        { error: "Anthropic API key not configured. Please add ANTHROPIC_API_KEY to Vercel environment variables." },
         { status: 500 }
       );
     }
@@ -55,10 +55,21 @@ Return a JSON response with this structure:
     }
 
     return NextResponse.json({ main: "", variations: [], hashtags: [] });
-  } catch (error) {
+  } catch (error: any) {
     console.error("Anthropic API error:", error);
+    
+    let errorMessage = "Failed to generate content. Please try again.";
+    
+    if (error?.status === 401) {
+      errorMessage = "Invalid Anthropic API key. Please check your API key.";
+    } else if (error?.status === 429) {
+      errorMessage = "Rate limit exceeded. Please try again in a few minutes.";
+    } else if (error?.message) {
+      errorMessage = `Error: ${error.message}`;
+    }
+    
     return NextResponse.json(
-      { error: "Failed to generate content. Please try again." },
+      { error: errorMessage },
       { status: 500 }
     );
   }
