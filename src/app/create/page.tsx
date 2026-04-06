@@ -114,6 +114,7 @@ export default function CreatePostPage() {
   const [includeLink, setIncludeLink] = useState(false);
   const [linkUrl, setLinkUrl] = useState("");
   const [linkShortened, setLinkShortened] = useState("");
+  const [error, setError] = useState("");
 
   const togglePlatform = (platformId: string) => {
     setSelectedPlatforms((prev) =>
@@ -150,6 +151,11 @@ export default function CreatePostPage() {
   };
 
   const handleGenerate = async () => {
+    if (!content.trim()) {
+      setError("Please enter a topic first");
+      return;
+    }
+    setError("");
     setIsGenerating(true);
     try {
       const response = await fetch("/api/anthropic/generate", {
@@ -163,6 +169,11 @@ export default function CreatePostPage() {
         }),
       });
       const data = await response.json();
+      if (data.error) {
+        setError(data.error);
+        setIsGenerating(false);
+        return;
+      }
       if (data.main) {
         setContent(data.main);
       }
@@ -172,8 +183,9 @@ export default function CreatePostPage() {
       if (data.hashtags) {
         setHashtags(data.hashtags);
       }
-    } catch (error) {
-      console.error("Generation failed:", error);
+    } catch (err) {
+      console.error("Generation failed:", err);
+      setError("Failed to generate content. Please try again.");
     } finally {
       setIsGenerating(false);
     }
@@ -284,6 +296,13 @@ export default function CreatePostPage() {
               placeholder="What would you like to share? Describe your topic and our AI will help craft the perfect post..."
               className="min-h-[200px] text-base"
             />
+
+            {error && (
+              <div className="mt-4 p-3 bg-red-50 text-red-700 rounded-xl text-sm flex items-center gap-2">
+                <AlertCircle className="w-4 h-4" />
+                {error}
+              </div>
+            )}
 
             <div className="mt-4 p-3 bg-[#f3f3fb] rounded-xl">
               <div className="flex items-center gap-3 mb-2">
