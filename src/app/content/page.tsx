@@ -175,17 +175,17 @@ export default function ContentPage() {
                 </div>
               )}
 
-              {post.scheduledAt && (
+              {post.scheduled_at && (
                 <div className="flex items-center gap-2 text-xs text-[#5b5f6b] mb-4">
                   <Calendar className="w-4 h-4" />
-                  {new Date(post.scheduledAt).toLocaleString()}
+                  {new Date(post.scheduled_at).toLocaleString()}
                 </div>
               )}
 
               <div className="flex items-center justify-between pt-4 border-t border-[#aeb1bf]/15">
                 <span className="text-[10px] text-[#5b5f6b]">
-                  {post.publishedAt
-                    ? `Published ${new Date(post.publishedAt).toLocaleDateString()}`
+                  {post.published_at
+                    ? `Published ${new Date(post.published_at).toLocaleDateString()}`
                     : post.scheduledAt
                     ? `Scheduled ${new Date(post.scheduledAt).toLocaleDateString()}`
                     : "Draft"}
@@ -236,8 +236,8 @@ export default function ContentPage() {
                 </div>
 
                 <div className="w-32 text-sm text-[#5b5f6b]">
-                  {post.publishedAt
-                    ? new Date(post.publishedAt).toLocaleDateString()
+                  {post.published_at
+                    ? new Date(post.published_at).toLocaleDateString()
                     : post.scheduledAt
                     ? new Date(post.scheduledAt).toLocaleDateString()
                     : "-"}
