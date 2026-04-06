@@ -26,6 +26,7 @@ import {
   Video,
   MessageCircle,
   Pin,
+  X,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
