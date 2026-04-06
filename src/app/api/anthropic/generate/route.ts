@@ -1,20 +1,20 @@
 import { NextResponse } from "next/server";
 import Anthropic from "@anthropic-ai/sdk";
 
-const anthropic = new Anthropic({
-  apiKey: process.env.ANTHROPIC_API_KEY || "",
-});
-
 export async function POST(request: Request) {
   try {
     const { topic, platforms, tone, includeHashtags } = await request.json();
 
-    if (!process.env.ANTHROPIC_API_KEY) {
+    const apiKey = process.env.ANTHROPIC_API_KEY;
+    
+    if (!apiKey) {
       return NextResponse.json(
         { error: "Anthropic API key not configured" },
         { status: 500 }
       );
     }
+
+    const anthropic = new Anthropic({ apiKey });
 
     const platformContext = platforms.length > 1
       ? `Adapt the content for each platform: ${platforms.join(", ")}.`
@@ -58,7 +58,7 @@ Return a JSON response with this structure:
   } catch (error) {
     console.error("Anthropic API error:", error);
     return NextResponse.json(
-      { error: "Failed to generate content" },
+      { error: "Failed to generate content. Please try again." },
       { status: 500 }
     );
   }
