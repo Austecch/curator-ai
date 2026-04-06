@@ -2,24 +2,18 @@ import { createClient, SupabaseClient } from "@supabase/supabase-js";
 import type { Post, Platform, Notification, Profile, AISettings, ScheduledPost } from "@/types";
 
 let _supabase: SupabaseClient | null = null;
-
-function createDummyClient(): SupabaseClient {
-  const dummyClient = createClient("https://placeholder.supabase.co", "placeholder-key");
-  return dummyClient;
-}
+let _supabaseInitialized = false;
 
 export function getSupabase(): SupabaseClient {
-  if (typeof window === 'undefined') {
-    return createDummyClient();
-  }
-  if (!_supabase) {
+  if (!_supabaseInitialized) {
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
     const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
     if (supabaseUrl && supabaseAnonKey) {
       _supabase = createClient(supabaseUrl, supabaseAnonKey);
     } else {
-      _supabase = createDummyClient();
+      throw new Error("Missing Supabase environment variables");
     }
+    _supabaseInitialized = true;
   }
   return _supabase;
 }
@@ -31,9 +25,10 @@ export const supabase = new Proxy({} as SupabaseClient, {
 });
 
 let _supabaseAdmin: SupabaseClient | null = null;
+let _supabaseAdminInitialized = false;
 
 export function getSupabaseAdmin(): SupabaseClient {
-  if (!_supabaseAdmin) {
+  if (!_supabaseAdminInitialized) {
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
     const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
     if (supabaseUrl && serviceRoleKey) {
@@ -44,8 +39,9 @@ export function getSupabaseAdmin(): SupabaseClient {
         },
       });
     } else {
-      _supabaseAdmin = createDummyClient();
+      throw new Error("Missing Supabase admin environment variables");
     }
+    _supabaseAdminInitialized = true;
   }
   return _supabaseAdmin;
 }
