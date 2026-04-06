@@ -115,12 +115,67 @@ export function usePlatforms(userId: string | null) {
   const connectedPlatforms = platforms.filter((p) => p.is_active);
   const activePlatformsCount = connectedPlatforms.length;
 
+  const addPlatform = async (platformData: Partial<Platform> & { platform: Platform["platform"]; platform_name: string; access_token: string }) => {
+    if (!userId) return { error: new Error("Not authenticated") };
+
+    const { data, error } = await supabase
+      .from("platforms")
+      .insert({
+        user_id: userId,
+        platform: platformData.platform,
+        platform_name: platformData.platform_name,
+        platform_icon: platformData.platform_icon || null,
+        access_token: platformData.access_token,
+        refresh_token: platformData.refresh_token || null,
+        is_active: platformData.is_active ?? true,
+        followers_count: platformData.followers_count || null,
+      })
+      .select()
+      .single();
+
+    if (!error && data) {
+      setPlatforms((prev) => [data as Platform, ...prev]);
+    }
+
+    return { data: data as Platform | null, error };
+  };
+
+  const removePlatform = async (platformId: string) => {
+    const { error } = await supabase.from("platforms").delete().eq("id", platformId);
+
+    if (!error) {
+      setPlatforms((prev) => prev.filter((p) => p.id !== platformId));
+    }
+
+    return { error };
+  };
+
+  const refreshPlatform = async (platformId: string, updates: Partial<Platform>) => {
+    const { data, error } = await supabase
+      .from("platforms")
+      .update({ ...updates, updated_at: new Date().toISOString() })
+      .eq("id", platformId)
+      .select()
+      .single();
+
+    if (!error && data) {
+      setPlatforms((prev) =>
+        prev.map((p) => (p.id === platformId ? (data as Platform) : p))
+      );
+    }
+
+    return { data: data as Platform | null, error };
+  };
+
   return {
     platforms,
     connectedPlatforms,
     activePlatformsCount,
     loading,
     error,
+    addPlatform,
+    removePlatform,
+    refreshPlatform,
     connectPlatform,
     disconnectPlatform,
     togglePlatformStatus,

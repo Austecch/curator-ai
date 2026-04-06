@@ -1,8 +1,10 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { DashboardShell } from "@/components/layout";
 import { Card, Button, Textarea, Badge } from "@/components/ui";
+import { useAuth } from "@/lib/hooks/useAuth";
 import {
   Sparkles,
   Send,
@@ -100,6 +102,8 @@ const workflowSteps = [
 type WorkflowStatus = "draft" | "review" | "approved";
 
 export default function CreatePostPage() {
+  const { user, isAuthenticated } = useAuth();
+  const router = useRouter();
   const [content, setContent] = useState("");
   const [selectedPlatforms, setSelectedPlatforms] = useState<string[]>(["linkedin", "instagram"]);
   const [tone, setTone] = useState("professional");
@@ -215,22 +219,103 @@ export default function CreatePostPage() {
   };
 
   const handleSubmit = async () => {
-    if (isOverLimit()) return;
+    if (isOverLimit() || !user?.id) return;
     
+    setError("");
+    
+    const scheduledAt = isScheduled && scheduledDate && scheduledTime
+      ? `${scheduledDate}T${scheduledTime}`
+      : null;
+
+    if (workflowStatus === "approved" && !scheduledAt) {
+      const aggregatorApiKey = localStorage.getItem("aggregator_api_key");
+      const aggregatorApiUrl = localStorage.getItem("aggregator_api_url");
+      const savedAccounts = localStorage.getItem("aggregator_accounts");
+      const savedPlatformOptions = localStorage.getItem("platform_options");
+      
+      if (aggregatorApiKey && aggregatorApiUrl) {
+        let accountIds: any[] = [];
+        let platformOptions: Record<string, any> = {};
+        
+        if (savedAccounts) {
+          try {
+            accountIds = JSON.parse(savedAccounts);
+          } catch {}
+        }
+        
+        if (savedPlatformOptions) {
+          try {
+            platformOptions = JSON.parse(savedPlatformOptions);
+          } catch {}
+        }
+        
+        const publishResponse = await fetch("/api/publish", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            user_id: user.id,
+            content,
+            platforms: selectedPlatforms,
+            scheduled_at: null,
+            aggregator_settings: {
+              api_key: aggregatorApiKey,
+              api_url: aggregatorApiUrl,
+            },
+            account_ids: accountIds.length > 0 ? accountIds : undefined,
+            platform_options: Object.keys(platformOptions).length > 0 ? platformOptions : undefined,
+          }),
+        });
+        
+        const publishData = await publishResponse.json();
+        
+        if (publishData.error && !publishData.post) {
+          setError(publishData.error);
+          return;
+        }
+        
+        if (publishData.errors && publishData.errors.length > 0) {
+          setError("Some posts failed: " + publishData.errors.map((e: any) => e.error).join(", "));
+          return;
+        }
+        
+        setContent("");
+        setSelectedPlatforms([]);
+        setHashtags([]);
+        setGeneratedVariations([]);
+        setWorkflowStatus("draft");
+        router.push("/dashboard");
+        return;
+      }
+    }
+
     const response = await fetch("/api/posts", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
+        user_id: user.id,
         content,
         platforms: selectedPlatforms,
-        workflowStatus,
-        scheduled_at: isScheduled && scheduledDate && scheduledTime
-          ? `${scheduledDate}T${scheduledTime}`
-          : null,
+        status: workflowStatus,
+        scheduled_at: scheduledAt,
       }),
     });
     const data = await response.json();
-    console.log("Post created:", data);
+    
+    if (data.error) {
+      setError(data.error);
+      return;
+    }
+    
+    setContent("");
+    setSelectedPlatforms([]);
+    setHashtags([]);
+    setGeneratedVariations([]);
+    setWorkflowStatus("draft");
+    setIsScheduled(false);
+    setScheduledDate("");
+    setScheduledTime("");
+    
+    router.push("/dashboard");
   };
 
   const charCount = getCharacterCount();

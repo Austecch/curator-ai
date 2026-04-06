@@ -105,8 +105,26 @@ export default function WorkflowPage() {
     rejected: workflowItems.filter((i) => i.status === "rejected").length,
   };
 
-  const handleStatusChange = (id: string, newStatus: WorkflowItem["status"]) => {
-    console.log(`Changing ${id} to ${newStatus}`);
+  const handleStatusChange = async (id: string, newStatus: WorkflowItem["status"]) => {
+    try {
+      const { error } = await supabase
+        .from("posts")
+        .update({ status: newStatus, updated_at: new Date().toISOString() })
+        .eq("id", id);
+
+      if (!error) {
+        setWorkflowItems((prev) =>
+          prev.map((item) =>
+            item.id === id ? { ...item, status: newStatus, updatedAt: new Date().toLocaleDateString() } : item
+          )
+        );
+        if (selectedItem && selectedItem.id === id) {
+          setSelectedItem({ ...selectedItem, status: newStatus });
+        }
+      }
+    } catch (err) {
+      console.error("Error updating status:", err);
+    }
   };
 
   return (
@@ -221,11 +239,11 @@ export default function WorkflowPage() {
 
                 {item.status === "review" && (
                   <div className="flex items-center gap-2 mt-4 pt-4 border-t border-[#aeb1bf]/20">
-                    <Button variant="secondary" size="sm">
+                    <Button variant="secondary" size="sm" onClick={() => handleStatusChange(item.id, "rejected")}>
                       <X className="w-4 h-4 mr-1" />
                       Reject
                     </Button>
-                    <Button variant="primary" size="sm">
+                    <Button variant="primary" size="sm" onClick={() => handleStatusChange(item.id, "approved")}>
                       <Check className="w-4 h-4 mr-1" />
                       Approve
                     </Button>
@@ -290,7 +308,7 @@ export default function WorkflowPage() {
               <div className="flex items-center gap-3 pt-4 border-t border-[#aeb1bf]/20">
                 <Button variant="secondary">Edit</Button>
                 {selectedItem.status !== "approved" && (
-                  <Button variant="primary">
+                  <Button variant="primary" onClick={() => handleStatusChange(selectedItem.id, "approved")}>
                     <Check className="w-4 h-4 mr-2" />
                     Approve
                   </Button>

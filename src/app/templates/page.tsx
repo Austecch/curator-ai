@@ -1,8 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { DashboardShell } from "@/components/layout";
-import { Card, Badge, Button } from "@/components/ui";
+import { Card, Badge, Button, Textarea, Input } from "@/components/ui";
+import { useAuth } from "@/lib/hooks/useAuth";
+import { useRouter } from "next/navigation";
 import {
   Plus,
   Search,
@@ -13,6 +15,11 @@ import {
   MoreVertical,
   Clock,
   Check,
+  X,
+  Briefcase,
+  Camera,
+  Users,
+  MessageCircle,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -25,7 +32,7 @@ interface Template {
   createdAt: string;
 }
 
-const templates: Template[] = [
+const defaultTemplates: Template[] = [
   {
     id: "1",
     name: "Product Launch",
@@ -60,6 +67,13 @@ const templates: Template[] = [
   },
 ];
 
+const platformOptions = [
+  { id: "linkedin", name: "LinkedIn", icon: Briefcase, color: "#0077B5" },
+  { id: "instagram", name: "Instagram", icon: Camera, color: "#E4405F" },
+  { id: "facebook", name: "Facebook", icon: Users, color: "#1877F2" },
+  { id: "twitter", name: "X (Twitter)", icon: MessageCircle, color: "#000000" },
+];
+
 const platformColors: Record<string, string> = {
   linkedin: "#0077B5",
   instagram: "#E4405F",
@@ -70,8 +84,22 @@ const platformColors: Record<string, string> = {
 };
 
 export default function TemplatesPage() {
+  const { user, isAuthenticated, loading: authLoading } = useAuth();
+  const router = useRouter();
+  
+  const [templates, setTemplates] = useState<Template[]>(defaultTemplates);
   const [searchQuery, setSearchQuery] = useState("");
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [editingTemplate, setEditingTemplate] = useState<Template | null>(null);
+  const [newTemplateName, setNewTemplateName] = useState("");
+  const [newTemplateContent, setNewTemplateContent] = useState("");
+  const [newTemplatePlatforms, setNewTemplatePlatforms] = useState<string[]>(["linkedin"]);
+
+  useEffect(() => {
+    if (!authLoading && !isAuthenticated) {
+      router.push("/login");
+    }
+  }, [authLoading, isAuthenticated, router]);
 
   const filteredTemplates = templates.filter((t) =>
     t.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -79,12 +107,96 @@ export default function TemplatesPage() {
   );
 
   const handleUseTemplate = (template: Template) => {
-    console.log("Using template:", template);
+    const encodedContent = encodeURIComponent(template.content);
+    router.push(`/create?template=${encodedContent}`);
   };
 
   const handleDuplicateTemplate = (template: Template) => {
-    console.log("Duplicating template:", template);
+    const newTemplate: Template = {
+      ...template,
+      id: `copy-${Date.now()}`,
+      name: `${template.name} (Copy)`,
+      usageCount: 0,
+      createdAt: new Date().toISOString().split("T")[0],
+    };
+    setTemplates((prev) => [newTemplate, ...prev]);
   };
+
+  const handleDeleteTemplate = (id: string) => {
+    if (!confirm("Delete this template?")) return;
+    setTemplates((prev) => prev.filter((t) => t.id !== id));
+  };
+
+  const handleTogglePlatform = (platformId: string) => {
+    setNewTemplatePlatforms((prev) =>
+      prev.includes(platformId)
+        ? prev.filter((p) => p !== platformId)
+        : [...prev, platformId]
+    );
+  };
+
+  const handleSaveTemplate = () => {
+    if (!newTemplateName.trim() || !newTemplateContent.trim()) {
+      alert("Please fill in all fields");
+      return;
+    }
+
+    if (editingTemplate) {
+      setTemplates((prev) =>
+        prev.map((t) =>
+          t.id === editingTemplate.id
+            ? { ...t, name: newTemplateName, content: newTemplateContent, platforms: newTemplatePlatforms }
+            : t
+        )
+      );
+    } else {
+      const newTemplate: Template = {
+        id: `template-${Date.now()}`,
+        name: newTemplateName,
+        content: newTemplateContent,
+        platforms: newTemplatePlatforms,
+        usageCount: 0,
+        createdAt: new Date().toISOString().split("T")[0],
+      };
+      setTemplates((prev) => [newTemplate, ...prev]);
+    }
+
+    setShowCreateModal(false);
+    setEditingTemplate(null);
+    setNewTemplateName("");
+    setNewTemplateContent("");
+    setNewTemplatePlatforms(["linkedin"]);
+  };
+
+  const handleEditTemplate = (template: Template) => {
+    setEditingTemplate(template);
+    setNewTemplateName(template.name);
+    setNewTemplateContent(template.content);
+    setNewTemplatePlatforms(template.platforms);
+    setShowCreateModal(true);
+  };
+
+  const closeModal = () => {
+    setShowCreateModal(false);
+    setEditingTemplate(null);
+    setNewTemplateName("");
+    setNewTemplateContent("");
+    setNewTemplatePlatforms(["linkedin"]);
+  };
+
+  if (authLoading) {
+    return (
+      <DashboardShell>
+        <div className="flex items-center justify-center min-h-[400px]">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#005cbb]"></div>
+        </div>
+      </DashboardShell>
+    );
+  }
+
+  if (!isAuthenticated) {
+    return null;
+  }
 
   return (
     <DashboardShell>
@@ -138,13 +250,22 @@ export default function TemplatesPage() {
                 <button
                   onClick={() => handleDuplicateTemplate(template)}
                   className="p-2 rounded-lg hover:bg-[#f3f3fb] transition-colors"
+                  title="Duplicate"
                 >
                   <Copy className="w-4 h-4 text-[#5b5f6b]" />
                 </button>
-                <button className="p-2 rounded-lg hover:bg-[#f3f3fb] transition-colors">
+                <button
+                  onClick={() => handleEditTemplate(template)}
+                  className="p-2 rounded-lg hover:bg-[#f3f3fb] transition-colors"
+                  title="Edit"
+                >
                   <Edit className="w-4 h-4 text-[#5b5f6b]" />
                 </button>
-                <button className="p-2 rounded-lg hover:bg-[#fe8983]/20 transition-colors">
+                <button
+                  onClick={() => handleDeleteTemplate(template.id)}
+                  className="p-2 rounded-lg hover:bg-[#fe8983]/20 transition-colors"
+                  title="Delete"
+                >
                   <Trash2 className="w-4 h-4 text-[#9f403d]" />
                 </button>
               </div>
@@ -198,7 +319,17 @@ export default function TemplatesPage() {
       {showCreateModal && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50">
           <Card className="w-full max-w-lg p-6 m-4">
-            <h3 className="text-xl font-bold mb-4">Create Template</h3>
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-xl font-bold">
+                {editingTemplate ? "Edit Template" : "Create Template"}
+              </h3>
+              <button
+                onClick={closeModal}
+                className="p-2 rounded-lg hover:bg-[#f3f3fb] transition-colors"
+              >
+                <X className="w-5 h-5 text-[#5b5f6b]" />
+              </button>
+            </div>
             <div className="space-y-4">
               <div>
                 <label className="block text-xs font-bold text-[#5b5f6b] uppercase tracking-wider mb-2">
@@ -207,6 +338,8 @@ export default function TemplatesPage() {
                 <input
                   type="text"
                   placeholder="e.g., Product Announcement"
+                  value={newTemplateName}
+                  onChange={(e) => setNewTemplateName(e.target.value)}
                   className="w-full bg-[#f3f3fb] border-none rounded-xl py-3 px-4 text-sm focus:ring-2 focus:ring-[#005cbb]/20 outline-none"
                 />
               </div>
@@ -216,16 +349,40 @@ export default function TemplatesPage() {
                 </label>
                 <textarea
                   placeholder="Use [variable] for placeholders..."
+                  value={newTemplateContent}
+                  onChange={(e) => setNewTemplateContent(e.target.value)}
                   className="w-full bg-[#f3f3fb] border-none rounded-xl py-3 px-4 text-sm focus:ring-2 focus:ring-[#005cbb]/20 outline-none h-32 resize-none"
                 />
               </div>
+              <div>
+                <label className="block text-xs font-bold text-[#5b5f6b] uppercase tracking-wider mb-2">
+                  Platforms
+                </label>
+                <div className="flex flex-wrap gap-2">
+                  {platformOptions.map((platform) => (
+                    <button
+                      key={platform.id}
+                      onClick={() => handleTogglePlatform(platform.id)}
+                      className={cn(
+                        "flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-all",
+                        newTemplatePlatforms.includes(platform.id)
+                          ? "bg-[#005cbb] text-white"
+                          : "bg-[#f3f3fb] text-[#5b5f6b] hover:bg-[#e6e7f4]"
+                      )}
+                    >
+                      <platform.icon className="w-4 h-4" />
+                      {platform.name}
+                    </button>
+                  ))}
+                </div>
+              </div>
               <div className="flex items-center justify-end gap-3 mt-6">
-                <Button variant="secondary" onClick={() => setShowCreateModal(false)}>
+                <Button variant="secondary" onClick={closeModal}>
                   Cancel
                 </Button>
-                <Button variant="primary">
+                <Button variant="primary" onClick={handleSaveTemplate}>
                   <Check className="w-4 h-4 mr-2" />
-                  Save Template
+                  {editingTemplate ? "Update Template" : "Save Template"}
                 </Button>
               </div>
             </div>

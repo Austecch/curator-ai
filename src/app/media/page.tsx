@@ -1,8 +1,9 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { DashboardShell } from "@/components/layout";
 import { Card, Badge, Button } from "@/components/ui";
+import { useAuth } from "@/lib/hooks/useAuth";
 import {
   Upload,
   Search,
@@ -18,6 +19,7 @@ import {
   X,
   MoreVertical,
   Filter,
+  Loader2,
 } from "lucide-react";
 import { cn, formatRelativeTime } from "@/lib/utils";
 
@@ -32,81 +34,133 @@ interface MediaItem {
   createdAt: string;
 }
 
-const mediaItems: MediaItem[] = [
-  {
-    id: "1",
-    name: "product-launch-hero.jpg",
-    type: "image",
-    size: "2.4 MB",
-    url: "https://picsum.photos/800/600",
-    dimensions: "800 x 600",
-    usedIn: 3,
-    createdAt: "2024-10-24",
-  },
-  {
-    id: "2",
-    name: "team-photo.jpg",
-    type: "image",
-    size: "1.8 MB",
-    url: "https://picsum.photos/800/601",
-    dimensions: "800 x 600",
-    usedIn: 5,
-    createdAt: "2024-10-22",
-  },
-  {
-    id: "3",
-    name: "behind-scenes-reel.mp4",
-    type: "video",
-    size: "24.6 MB",
-    url: "#",
-    usedIn: 1,
-    createdAt: "2024-10-20",
-  },
-  {
-    id: "4",
-    name: "infographic.png",
-    type: "image",
-    size: "890 KB",
-    url: "https://picsum.photos/800/602",
-    dimensions: "1200 x 800",
-    usedIn: 8,
-    createdAt: "2024-10-18",
-  },
-  {
-    id: "5",
-    name: "testimonial-video.mp4",
-    type: "video",
-    size: "45.2 MB",
-    url: "#",
-    usedIn: 2,
-    createdAt: "2024-10-15",
-  },
-  {
-    id: "6",
-    name: "logo-white.png",
-    type: "image",
-    size: "45 KB",
-    url: "https://picsum.photos/800/603",
-    dimensions: "400 x 400",
-    usedIn: 12,
-    createdAt: "2024-10-10",
-  },
-];
-
-const folders = [
-  { name: "Product Images", count: 24 },
-  { name: "Team Photos", count: 18 },
-  { name: "Promo Videos", count: 6 },
-  { name: "Brand Assets", count: 9 },
-];
-
 export default function MediaLibraryPage() {
+  const { user, isAuthenticated, loading: authLoading } = useAuth();
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
   const [searchQuery, setSearchQuery] = useState("");
   const [filter, setFilter] = useState<"all" | "image" | "video">("all");
   const [selectedItems, setSelectedItems] = useState<string[]>([]);
   const [copiedId, setCopiedId] = useState<string | null>(null);
+  const [mediaItems, setMediaItems] = useState<MediaItem[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [uploading, setUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const mockMediaItems: MediaItem[] = [
+    {
+      id: "1",
+      name: "product-launch-hero.jpg",
+      type: "image",
+      size: "2.4 MB",
+      url: "https://picsum.photos/800/600",
+      dimensions: "800 x 600",
+      usedIn: 3,
+      createdAt: "2024-10-24",
+    },
+    {
+      id: "2",
+      name: "team-photo.jpg",
+      type: "image",
+      size: "1.8 MB",
+      url: "https://picsum.photos/800/601",
+      dimensions: "800 x 600",
+      usedIn: 5,
+      createdAt: "2024-10-22",
+    },
+    {
+      id: "3",
+      name: "behind-scenes-reel.mp4",
+      type: "video",
+      size: "24.6 MB",
+      url: "#",
+      usedIn: 1,
+      createdAt: "2024-10-20",
+    },
+    {
+      id: "4",
+      name: "infographic.png",
+      type: "image",
+      size: "890 KB",
+      url: "https://picsum.photos/800/602",
+      dimensions: "1200 x 800",
+      usedIn: 8,
+      createdAt: "2024-10-18",
+    },
+    {
+      id: "5",
+      name: "testimonial-video.mp4",
+      type: "video",
+      size: "45.2 MB",
+      url: "#",
+      usedIn: 2,
+      createdAt: "2024-10-15",
+    },
+    {
+      id: "6",
+      name: "logo-white.png",
+      type: "image",
+      size: "45 KB",
+      url: "https://picsum.photos/800/603",
+      dimensions: "400 x 400",
+      usedIn: 12,
+      createdAt: "2024-10-10",
+    },
+  ];
+
+  const folders = [
+    { name: "Product Images", count: 24 },
+    { name: "Team Photos", count: 18 },
+    { name: "Promo Videos", count: 6 },
+    { name: "Brand Assets", count: 9 },
+  ];
+
+  useEffect(() => {
+    if (!authLoading && isAuthenticated) {
+      setMediaItems(mockMediaItems);
+      setLoading(false);
+    }
+  }, [authLoading, isAuthenticated]);
+
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+
+    setUploading(true);
+
+    for (let i = 0; i < files.length; i++) {
+      const file = files[i];
+      const isImage = file.type.startsWith("image/");
+      const isVideo = file.type.startsWith("video/");
+
+      if (!isImage && !isVideo) {
+        alert(`${file.name} is not an image or video`);
+        continue;
+      }
+
+      const newItem: MediaItem = {
+        id: `new-${Date.now()}-${i}`,
+        name: file.name,
+        type: isImage ? "image" : "video",
+        size: formatFileSize(file.size),
+        url: URL.createObjectURL(file),
+        usedIn: 0,
+        createdAt: new Date().toISOString().split("T")[0],
+      };
+
+      setMediaItems((prev) => [newItem, ...prev]);
+    }
+
+    setUploading(false);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
+  };
+
+  const formatFileSize = (bytes: number): string => {
+    if (bytes < 1024) return bytes + " B";
+    if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + " KB";
+    return (bytes / (1024 * 1024)).toFixed(1) + " MB";
+  };
 
   const filteredItems = mediaItems.filter((item) => {
     if (filter !== "all" && item.type !== filter) return false;
@@ -134,6 +188,40 @@ export default function MediaLibraryPage() {
     setTimeout(() => setCopiedId(null), 2000);
   };
 
+  const handleDeleteSelected = () => {
+    if (selectedItems.length === 0) return;
+    if (!confirm(`Delete ${selectedItems.length} item(s)?`)) return;
+
+    setMediaItems((prev) => prev.filter((item) => !selectedItems.includes(item.id)));
+    setSelectedItems([]);
+  };
+
+  if (authLoading || loading) {
+    return (
+      <DashboardShell>
+        <div className="flex items-center justify-center min-h-[400px]">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#005cbb] mx-auto mb-4"></div>
+            <p className="text-[#5b5f6b]">Loading media...</p>
+          </div>
+        </div>
+      </DashboardShell>
+    );
+  }
+
+  if (!isAuthenticated) {
+    if (typeof window !== "undefined") {
+      window.location.href = "/login";
+    }
+    return (
+      <DashboardShell>
+        <div className="flex items-center justify-center min-h-[400px]">
+          <p className="text-[#5b5f6b]">Redirecting to login...</p>
+        </div>
+      </DashboardShell>
+    );
+  }
+
   return (
     <DashboardShell>
       <section className="mb-8 flex items-center justify-between">
@@ -148,6 +236,8 @@ export default function MediaLibraryPage() {
         <Button
           variant="primary"
           onClick={() => fileInputRef.current?.click()}
+          disabled={uploading}
+          isLoading={uploading}
         >
           <Upload className="w-5 h-5 mr-2" />
           Upload Media
@@ -158,7 +248,7 @@ export default function MediaLibraryPage() {
           multiple
           accept="image/*,video/*"
           className="hidden"
-          onChange={(e) => console.log(e.target.files)}
+          onChange={handleFileUpload}
         />
       </section>
 
@@ -241,7 +331,10 @@ export default function MediaLibraryPage() {
                   <span className="text-sm text-[#5b5f6b]">
                     {selectedItems.length} selected
                   </span>
-                  <button className="p-2 rounded-lg hover:bg-[#f3f3fb] transition-colors">
+                  <button 
+                    onClick={handleDeleteSelected}
+                    className="p-2 rounded-lg hover:bg-[#f3f3fb] transition-colors"
+                  >
                     <Trash2 className="w-4 h-4 text-[#9f403d]" />
                   </button>
                 </div>
@@ -393,7 +486,12 @@ export default function MediaLibraryPage() {
                     <button className="p-2 rounded-lg hover:bg-[#f3f3fb] transition-colors">
                       <Download className="w-4 h-4 text-[#5b5f6b]" />
                     </button>
-                    <button className="p-2 rounded-lg hover:bg-[#fe8983]/20 transition-colors">
+                    <button 
+                      onClick={() => {
+                        setMediaItems(prev => prev.filter(i => i.id !== item.id));
+                      }}
+                      className="p-2 rounded-lg hover:bg-[#fe8983]/20 transition-colors"
+                    >
                       <Trash2 className="w-4 h-4 text-[#9f403d]" />
                     </button>
                   </div>

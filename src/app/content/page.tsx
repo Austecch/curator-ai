@@ -3,6 +3,8 @@
 import { useState } from "react";
 import { DashboardShell } from "@/components/layout";
 import { Card, Badge, Button } from "@/components/ui";
+import { useAuth } from "@/lib/hooks/useAuth";
+import { usePosts } from "@/lib/hooks/usePosts";
 import {
   Search,
   Filter,
@@ -19,51 +21,9 @@ import {
   Users,
   X,
   Play,
+  Loader2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-
-const posts = [
-  {
-    id: "1",
-    content: "Excited to announce our Q3 product roadmap! We've been working tirelessly to bring you features that will transform how you manage social media.",
-    platforms: ["linkedin", "twitter"],
-    status: "published",
-    publishedAt: "2024-10-20T14:30:00",
-    analytics: { reach: 12400, engagements: 890 },
-  },
-  {
-    id: "2",
-    content: "Behind the scenes of our latest photoshoot. The team absolutely crushed it today!",
-    platforms: ["instagram", "facebook"],
-    status: "scheduled",
-    scheduledAt: "2024-10-25T10:00:00",
-    analytics: null,
-  },
-  {
-    id: "3",
-    content: "Top 5 tips for boosting your LinkedIn engagement. Thread incoming...",
-    platforms: ["linkedin", "twitter"],
-    status: "draft",
-    publishedAt: null,
-    analytics: null,
-  },
-  {
-    id: "4",
-    content: "Our new collection is finally here! Check out the link in bio.",
-    platforms: ["instagram", "tiktok"],
-    status: "published",
-    publishedAt: "2024-10-18T09:00:00",
-    analytics: { reach: 45600, engagements: 3420 },
-  },
-  {
-    id: "5",
-    content: "Community spotlight: Meet Sarah, our head of product design.",
-    platforms: ["linkedin"],
-    status: "published",
-    publishedAt: "2024-10-15T16:00:00",
-    analytics: { reach: 8900, engagements: 567 },
-  },
-];
 
 const platformIcons: Record<string, typeof Briefcase> = {
   linkedin: Briefcase,
@@ -74,9 +34,31 @@ const platformIcons: Record<string, typeof Briefcase> = {
 };
 
 export default function ContentPage() {
+  const { user, isAuthenticated, loading: authLoading } = useAuth();
+  const { posts, loading: postsLoading, deletePost } = usePosts(user?.id || null);
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
   const [filter, setFilter] = useState("all");
   const [searchQuery, setSearchQuery] = useState("");
+
+  if (authLoading || postsLoading) {
+    return (
+      <DashboardShell>
+        <div className="flex items-center justify-center min-h-[400px]">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#005cbb] mx-auto mb-4"></div>
+            <p className="text-[#5b5f6b]">Loading content...</p>
+          </div>
+        </div>
+      </DashboardShell>
+    );
+  }
+
+  if (!isAuthenticated) {
+    if (typeof window !== "undefined") {
+      window.location.href = "/login";
+    }
+    return null;
+  }
 
   const filteredPosts = posts.filter((post) => {
     if (filter !== "all" && post.status !== filter) return false;

@@ -3,6 +3,8 @@
 import { useState } from "react";
 import { DashboardShell } from "@/components/layout";
 import { Card, Badge, Button } from "@/components/ui";
+import { useAuth } from "@/lib/hooks/useAuth";
+import { usePlatforms } from "@/lib/hooks/usePlatforms";
 import {
   Plus,
   Check,
@@ -19,30 +21,25 @@ import {
   ExternalLink,
   Shield,
   Clock,
+  Loader2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-interface Platform {
+interface PlatformOption {
   id: string;
   name: string;
   description: string;
   icon: typeof Briefcase;
   color: string;
-  connected: boolean;
-  followers: string | null;
-  connectedAt: string | null;
 }
 
-const allPlatforms: Platform[] = [
+const allPlatformOptions: PlatformOption[] = [
   {
     id: "linkedin",
     name: "LinkedIn",
     description: "Connect with professionals and grow your network",
     icon: Briefcase,
     color: "#0077B5",
-    connected: true,
-    followers: "12.4k",
-    connectedAt: "2024-08-15",
   },
   {
     id: "instagram",
@@ -50,9 +47,6 @@ const allPlatforms: Platform[] = [
     description: "Share visual content and stories with your audience",
     icon: Camera,
     color: "#E4405F",
-    connected: true,
-    followers: "45.2k",
-    connectedAt: "2024-08-15",
   },
   {
     id: "facebook",
@@ -60,9 +54,6 @@ const allPlatforms: Platform[] = [
     description: "Reach a broad audience with posts and pages",
     icon: Users,
     color: "#1877F2",
-    connected: true,
-    followers: "8.9k",
-    connectedAt: "2024-09-01",
   },
   {
     id: "twitter",
@@ -70,9 +61,6 @@ const allPlatforms: Platform[] = [
     description: "Share updates and engage in real-time conversations",
     icon: X,
     color: "#000000",
-    connected: false,
-    followers: null,
-    connectedAt: null,
   },
   {
     id: "youtube",
@@ -80,9 +68,6 @@ const allPlatforms: Platform[] = [
     description: "Share videos and grow your subscriber base",
     icon: Play,
     color: "#FF0000",
-    connected: true,
-    followers: "5.2k",
-    connectedAt: "2024-09-10",
   },
   {
     id: "tiktok",
@@ -90,9 +75,6 @@ const allPlatforms: Platform[] = [
     description: "Create short-form video content for younger audiences",
     icon: Play,
     color: "#000000",
-    connected: false,
-    followers: null,
-    connectedAt: null,
   },
   {
     id: "pinterest",
@@ -100,9 +82,6 @@ const allPlatforms: Platform[] = [
     description: "Share and discover visual inspiration",
     icon: Pin,
     color: "#BD081C",
-    connected: true,
-    followers: "1.8k",
-    connectedAt: "2024-09-15",
   },
   {
     id: "reddit",
@@ -110,37 +89,103 @@ const allPlatforms: Platform[] = [
     description: "Engage with communities and share content",
     icon: MessageCircle,
     color: "#FF4500",
-    connected: false,
-    followers: null,
-    connectedAt: null,
   },
 ];
 
 export default function PlatformsPage() {
-  const [platforms, setPlatforms] = useState(allPlatforms);
+  const { user, isAuthenticated, loading: authLoading } = useAuth();
+  const { platforms, loading: platformsLoading, addPlatform, removePlatform, refreshPlatform } = usePlatforms(user?.id || null);
+  
   const [connecting, setConnecting] = useState<string | null>(null);
+  const [disconnecting, setDisconnecting] = useState<string | null>(null);
 
-  const toggleConnection = async (platformId: string) => {
-    setConnecting(platformId);
-    
-    setTimeout(() => {
-      setPlatforms((prev) =>
-        prev.map((p) =>
-          p.id === platformId
-            ? {
-                ...p,
-                connected: !p.connected,
-                followers: !p.connected ? "0" : null,
-                connectedAt: !p.connected ? new Date().toISOString().split("T")[0] : null,
-              }
-            : p
-        )
-      );
-      setConnecting(null);
-    }, 1500);
+  const isPlatformConnected = (platformId: string) => {
+    return platforms.some(p => p.platform === platformId && p.is_active);
   };
 
-  const connectedCount = platforms.filter((p) => p.connected).length;
+  const getConnectedPlatform = (platformId: string) => {
+    return platforms.find(p => p.platform === platformId);
+  };
+
+  const handleConnect = async (platformId: string) => {
+    setConnecting(platformId);
+    
+    try {
+      const platform = allPlatformOptions.find(p => p.id === platformId);
+      if (!platform) return;
+
+      await addPlatform({
+        platform: platformId as "linkedin" | "facebook" | "twitter" | "instagram" | "youtube" | "tiktok" | "pinterest" | "reddit" | "threads",
+        platform_name: platform.name,
+        access_token: `mock_token_${Date.now()}`,
+        is_active: true,
+        followers_count: Math.floor(Math.random() * 50000) + 1000,
+      });
+    } catch (error) {
+      console.error("Failed to connect platform:", error);
+    } finally {
+      setConnecting(null);
+    }
+  };
+
+  const handleDisconnect = async (platformId: string) => {
+    const connectedPlatform = getConnectedPlatform(platformId);
+    if (!connectedPlatform) return;
+
+    if (!confirm(`Are you sure you want to disconnect ${allPlatformOptions.find(p => p.id === platformId)?.name}?`)) {
+      return;
+    }
+
+    setDisconnecting(platformId);
+    try {
+      await removePlatform(connectedPlatform.id);
+    } catch (error) {
+      console.error("Failed to disconnect platform:", error);
+    } finally {
+      setDisconnecting(null);
+    }
+  };
+
+  const handleRefresh = async (platformId: string) => {
+    const connectedPlatform = getConnectedPlatform(platformId);
+    if (!connectedPlatform) return;
+
+    try {
+      await refreshPlatform(connectedPlatform.id, {
+        followers_count: Math.floor(Math.random() * 50000) + 1000,
+      });
+    } catch (error) {
+      console.error("Failed to refresh platform:", error);
+    }
+  };
+
+  const connectedCount = platforms.filter(p => p.is_active).length;
+
+  if (authLoading || platformsLoading) {
+    return (
+      <DashboardShell>
+        <div className="flex items-center justify-center min-h-[400px]">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#005cbb] mx-auto mb-4"></div>
+            <p className="text-[#5b5f6b]">Loading platforms...</p>
+          </div>
+        </div>
+      </DashboardShell>
+    );
+  }
+
+  if (!isAuthenticated) {
+    if (typeof window !== "undefined") {
+      window.location.href = "/login";
+    }
+    return (
+      <DashboardShell>
+        <div className="flex items-center justify-center min-h-[400px]">
+          <p className="text-[#5b5f6b]">Redirecting to login...</p>
+        </div>
+      </DashboardShell>
+    );
+  }
 
   return (
     <DashboardShell>
@@ -156,95 +201,113 @@ export default function PlatformsPage() {
       <div className="grid grid-cols-12 gap-8">
         <div className="col-span-8">
           <div className="grid grid-cols-2 gap-6">
-            {platforms.map((platform) => (
-              <Card
-                key={platform.id}
-                variant={platform.connected ? "interactive" : "default"}
-                className={cn(
-                  "p-6 relative overflow-hidden",
-                  !platform.connected && "opacity-75"
-                )}
-              >
-                {platform.connected && (
-                  <div
-                    className="absolute top-0 left-0 w-1 h-full"
-                    style={{ backgroundColor: platform.color }}
-                  />
-                )}
-
-                <div className="flex items-start justify-between">
-                  <div className="flex items-center gap-4">
+            {allPlatformOptions.map((platformOption) => {
+              const isConnected = isPlatformConnected(platformOption.id);
+              const connectedPlatform = getConnectedPlatform(platformOption.id);
+              
+              return (
+                <Card
+                  key={platformOption.id}
+                  variant={isConnected ? "interactive" : "default"}
+                  className={cn(
+                    "p-6 relative overflow-hidden",
+                    !isConnected && "opacity-75"
+                  )}
+                >
+                  {isConnected && (
                     <div
-                      className="w-12 h-12 rounded-xl flex items-center justify-center"
-                      style={{ backgroundColor: `${platform.color}20` }}
-                    >
-                      <platform.icon
-                        className="w-6 h-6"
-                        style={{ color: platform.color }}
-                      />
+                      className="absolute top-0 left-0 w-1 h-full"
+                      style={{ backgroundColor: platformOption.color }}
+                    />
+                  )}
+
+                  <div className="flex items-start justify-between">
+                    <div className="flex items-center gap-4">
+                      <div
+                        className="w-12 h-12 rounded-xl flex items-center justify-center"
+                        style={{ backgroundColor: `${platformOption.color}20` }}
+                      >
+                        <platformOption.icon
+                          className="w-6 h-6"
+                          style={{ color: platformOption.color }}
+                        />
+                      </div>
+                      <div>
+                        <h3 className="font-bold tracking-tight">{platformOption.name}</h3>
+                        {isConnected && connectedPlatform ? (
+                          <div className="flex items-center gap-2 mt-1">
+                            <Badge variant="success" size="sm">Connected</Badge>
+                            <span className="text-[10px] text-[#5b5f6b]">
+                              {connectedPlatform.followers_count 
+                                ? connectedPlatform.followers_count >= 1000 
+                                  ? `${(connectedPlatform.followers_count / 1000).toFixed(1)}k`
+                                  : connectedPlatform.followers_count
+                                : 0} followers
+                            </span>
+                          </div>
+                        ) : (
+                          <p className="text-xs text-[#5b5f6b] mt-1 max-w-[200px]">
+                            {platformOption.description}
+                          </p>
+                        )}
+                      </div>
                     </div>
-                    <div>
-                      <h3 className="font-bold tracking-tight">{platform.name}</h3>
-                      {platform.connected ? (
-                        <div className="flex items-center gap-2 mt-1">
-                          <Badge variant="success" size="sm">Connected</Badge>
-                          <span className="text-[10px] text-[#5b5f6b]">
-                            {platform.followers} followers
+                  </div>
+
+                  {isConnected && connectedPlatform && (
+                    <div className="mt-4 pt-4 border-t border-[#aeb1bf]/15">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-4 text-xs text-[#5b5f6b]">
+                          <span className="flex items-center gap-1">
+                            <Clock className="w-3 h-3" />
+                            Since {new Date(connectedPlatform.connected_at).toLocaleDateString()}
+                          </span>
+                          <span className="flex items-center gap-1">
+                            <Shield className="w-3 h-3" />
+                            Permissions granted
                           </span>
                         </div>
-                      ) : (
-                        <p className="text-xs text-[#5b5f6b] mt-1 max-w-[200px]">
-                          {platform.description}
-                        </p>
-                      )}
-                    </div>
-                  </div>
-                </div>
-
-                {platform.connected && (
-                  <div className="mt-4 pt-4 border-t border-[#aeb1bf]/15">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-4 text-xs text-[#5b5f6b]">
-                        <span className="flex items-center gap-1">
-                          <Clock className="w-3 h-3" />
-                          Since {platform.connectedAt}
-                        </span>
-                        <span className="flex items-center gap-1">
-                          <Shield className="w-3 h-3" />
-                          Permissions granted
-                        </span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <button className="p-2 rounded-lg hover:bg-[#f3f3fb] transition-colors">
-                          <RefreshCw className="w-4 h-4 text-[#5b5f6b]" />
-                        </button>
-                        <button
-                          onClick={() => toggleConnection(platform.id)}
-                          className="p-2 rounded-lg hover:bg-[#fe8983]/20 transition-colors"
-                        >
-                          <Trash2 className="w-4 h-4 text-[#9f403d]" />
-                        </button>
+                        <div className="flex items-center gap-2">
+                          <button 
+                            onClick={() => handleRefresh(platformOption.id)}
+                            className="p-2 rounded-lg hover:bg-[#f3f3fb] transition-colors"
+                          >
+                            <RefreshCw className="w-4 h-4 text-[#5b5f6b]" />
+                          </button>
+                          <button
+                            onClick={() => handleDisconnect(platformOption.id)}
+                            disabled={disconnecting === platformOption.id}
+                            className="p-2 rounded-lg hover:bg-[#fe8983]/20 transition-colors disabled:opacity-50"
+                          >
+                            {disconnecting === platformOption.id ? (
+                              <Loader2 className="w-4 h-4 text-[#9f403d] animate-spin" />
+                            ) : (
+                              <Trash2 className="w-4 h-4 text-[#9f403d]" />
+                            )}
+                          </button>
+                        </div>
                       </div>
                     </div>
-                  </div>
-                )}
+                  )}
 
-                {!platform.connected && (
-                  <div className="mt-4">
-                    <Button
-                      variant="secondary"
-                      size="sm"
-                      className="w-full"
-                      onClick={() => toggleConnection(platform.id)}
-                      isLoading={connecting === platform.id}
-                    >
-                      <Plus className="w-4 h-4 mr-2" />
-                      Connect
-                    </Button>
-                  </div>
-                )}
-              </Card>
-            ))}
+                  {!isConnected && (
+                    <div className="mt-4">
+                      <Button
+                        variant="secondary"
+                        size="sm"
+                        className="w-full"
+                        onClick={() => handleConnect(platformOption.id)}
+                        disabled={connecting === platformOption.id}
+                        isLoading={connecting === platformOption.id}
+                      >
+                        <Plus className="w-4 h-4 mr-2" />
+                        Connect
+                      </Button>
+                    </div>
+                  )}
+                </Card>
+              );
+            })}
           </div>
         </div>
 
@@ -269,13 +332,13 @@ export default function PlatformsPage() {
                     fill="none"
                     stroke="#005cbb"
                     strokeWidth="12"
-                    strokeDasharray={`${(connectedCount / allPlatforms.length) * 352} 352`}
+                    strokeDasharray={`${(connectedCount / allPlatformOptions.length) * 352} 352`}
                     strokeLinecap="round"
                   />
                 </svg>
                 <div className="absolute inset-0 flex flex-col items-center justify-center">
                   <span className="text-3xl font-extrabold">{connectedCount}</span>
-                  <span className="text-xs text-[#5b5f6b]">of {allPlatforms.length}</span>
+                  <span className="text-xs text-[#5b5f6b]">of {allPlatformOptions.length}</span>
                 </div>
               </div>
             </div>

@@ -36,18 +36,42 @@ const plans = [
 ];
 
 export default function SettingsPage() {
-  const { user, profile } = useAuth();
+  const { user, profile, signOut } = useAuth();
   const [activeTab, setActiveTab] = useState("profile");
   const [fullName, setFullName] = useState(profile?.full_name || user?.email?.split("@")[0] || "");
   const [email, setEmail] = useState(user?.email || "");
   const [timezone, setTimezone] = useState("America/New_York");
   const [language, setLanguage] = useState("en");
   const [isSaving, setIsSaving] = useState(false);
+  const [saveMessage, setSaveMessage] = useState("");
 
-  const handleSave = async () => {
+  const handleSaveProfile = async () => {
+    if (!user?.id) return;
     setIsSaving(true);
-    await new Promise((resolve) => setTimeout(resolve, 1000));
-    setIsSaving(false);
+    setSaveMessage("");
+    
+    try {
+      const { supabase } = await import("@/lib/database");
+      const { error } = await supabase
+        .from("profiles")
+        .update({ full_name: fullName, updated_at: new Date().toISOString() })
+        .eq("id", user.id);
+      
+      if (error) {
+        setSaveMessage("Failed to save: " + error.message);
+      } else {
+        setSaveMessage("Profile saved successfully!");
+      }
+    } catch (err) {
+      setSaveMessage("Failed to save profile");
+    } finally {
+      setIsSaving(false);
+      setTimeout(() => setSaveMessage(""), 3000);
+    }
+  };
+
+  const handleSignOut = async () => {
+    await signOut();
   };
 
   return (
@@ -169,10 +193,15 @@ export default function SettingsPage() {
                   </div>
                 </div>
 
-                <Button variant="primary" onClick={handleSave} isLoading={isSaving}>
+                <Button variant="primary" onClick={handleSaveProfile} isLoading={isSaving}>
                   <Check className="w-4 h-4 mr-2" />
                   Save Changes
                 </Button>
+                {saveMessage && (
+                  <p className={cn("text-sm mt-2", saveMessage.includes("Failed") ? "text-red-600" : "text-green-600")}>
+                    {saveMessage}
+                  </p>
+                )}
               </div>
             </Card>
           )}
@@ -270,6 +299,19 @@ export default function SettingsPage() {
                   </div>
                   <Button variant="ghost">View All</Button>
                 </div>
+
+                <div className="flex items-center justify-between p-4 bg-red-50 rounded-xl border border-red-200">
+                  <div className="flex items-center gap-4">
+                    <div className="w-12 h-12 rounded-xl bg-white flex items-center justify-center">
+                      <LogOut className="w-6 h-6 text-red-600" />
+                    </div>
+                    <div>
+                      <p className="font-bold text-red-700">Sign Out</p>
+                      <p className="text-sm text-[#5b5f6b]">Sign out of your account</p>
+                    </div>
+                  </div>
+                  <Button variant="secondary" onClick={handleSignOut}>Sign Out</Button>
+                </div>
               </div>
             </Card>
           )}
@@ -297,7 +339,7 @@ export default function SettingsPage() {
                   </div>
                 ))}
               </div>
-              <Button variant="primary" className="mt-6" onClick={handleSave} isLoading={isSaving}>
+              <Button variant="primary" className="mt-6" onClick={handleSaveProfile} isLoading={isSaving}>
                 Save Preferences
               </Button>
             </Card>
