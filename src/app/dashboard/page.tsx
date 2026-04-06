@@ -47,13 +47,32 @@ export default function DashboardPage() {
   const { platforms, activePlatformsCount, loading: platformsLoading } = usePlatforms(user?.id || null);
   const { unreadCount } = useNotifications(user?.id || null);
 
-  const loading = authLoading || postsLoading || platformsLoading;
+  const loading = authLoading;
 
-  if (!loading && !isAuthenticated) {
+  if (authLoading) {
+    return (
+      <DashboardShell>
+        <div className="flex items-center justify-center min-h-[400px]">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#005cbb] mx-auto mb-4"></div>
+            <p className="text-[#5b5f6b]">Loading...</p>
+          </div>
+        </div>
+      </DashboardShell>
+    );
+  }
+
+  if (!isAuthenticated) {
     if (typeof window !== 'undefined') {
       window.location.href = '/login';
     }
-    return null;
+    return (
+      <DashboardShell>
+        <div className="flex items-center justify-center min-h-[400px]">
+          <p className="text-[#5b5f6b]">Redirecting to login...</p>
+        </div>
+      </DashboardShell>
+    );
   }
 
   const upcomingPosts = posts

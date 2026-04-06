@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import { supabase, getCurrentUser } from "@/lib/database";
+import { supabase } from "@/lib/database";
 import type { User, Session } from "@supabase/supabase-js";
 import type { Profile } from "@/types";
 
@@ -36,17 +36,40 @@ export function useAuth() {
   useEffect(() => {
     const initAuth = async () => {
       try {
-        const { data: { session } } = await supabase.auth.getSession();
+        const { data: { session }, error } = await supabase.auth.getSession();
         
-        if (session?.user) {
-          const profile = await fetchProfile(session.user.id);
+        if (error) {
+          console.error("Auth session error:", error);
           setState({
-            user: session.user,
-            session,
-            profile,
+            user: null,
+            session: null,
+            profile: null,
             loading: false,
             error: null,
           });
+          return;
+        }
+        
+        if (session?.user) {
+          try {
+            const profile = await fetchProfile(session.user.id);
+            setState({
+              user: session.user,
+              session,
+              profile,
+              loading: false,
+              error: null,
+            });
+          } catch (profileError) {
+            console.error("Profile fetch error:", profileError);
+            setState({
+              user: session.user,
+              session,
+              profile: null,
+              loading: false,
+              error: null,
+            });
+          }
         } else {
           setState({
             user: null,
@@ -57,12 +80,13 @@ export function useAuth() {
           });
         }
       } catch (error) {
+        console.error("Auth init error:", error);
         setState({
           user: null,
           session: null,
           profile: null,
           loading: false,
-          error: error as Error,
+          error: null,
         });
       }
     };
@@ -72,14 +96,24 @@ export function useAuth() {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
         if (session?.user) {
-          const profile = await fetchProfile(session.user.id);
-          setState({
-            user: session.user,
-            session,
-            profile,
-            loading: false,
-            error: null,
-          });
+          try {
+            const profile = await fetchProfile(session.user.id);
+            setState({
+              user: session.user,
+              session,
+              profile,
+              loading: false,
+              error: null,
+            });
+          } catch {
+            setState({
+              user: session.user,
+              session,
+              profile: null,
+              loading: false,
+              error: null,
+            });
+          }
         } else {
           setState({
             user: null,
