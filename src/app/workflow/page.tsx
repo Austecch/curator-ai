@@ -1,8 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { DashboardShell } from "@/components/layout";
 import { Card, Button, Badge } from "@/components/ui";
+import { useAuth } from "@/lib/hooks/useAuth";
+import { supabase } from "@/lib/database";
 import {
   Workflow,
   Plus,
@@ -31,48 +33,6 @@ interface WorkflowItem {
   updatedAt: string;
 }
 
-const workflowItems: WorkflowItem[] = [
-  {
-    id: "1",
-    title: "Q4 Strategy Announcement",
-    content: "Excited to share our Q4 strategy updates...",
-    platform: "linkedin",
-    status: "review",
-    assignee: "Sarah Chen",
-    createdAt: "2024-10-24",
-    updatedAt: "2024-10-24",
-  },
-  {
-    id: "2",
-    title: "Product Launch Post",
-    content: "Introducing our new product line...",
-    platform: "instagram",
-    status: "approved",
-    assignee: "Alex Rivers",
-    createdAt: "2024-10-23",
-    updatedAt: "2024-10-24",
-  },
-  {
-    id: "3",
-    title: "Weekly Tip",
-    content: "Here's a quick tip for better engagement...",
-    platform: "twitter",
-    status: "draft",
-    createdAt: "2024-10-24",
-    updatedAt: "2024-10-24",
-  },
-  {
-    id: "4",
-    title: "Customer Testimonial",
-    content: "\"This product changed how we work...\"",
-    platform: "facebook",
-    status: "review",
-    assignee: "Mike Johnson",
-    createdAt: "2024-10-22",
-    updatedAt: "2024-10-24",
-  },
-];
-
 const platformIcons: Record<string, typeof Briefcase> = {
   linkedin: Briefcase,
   instagram: Camera,
@@ -88,8 +48,49 @@ const statusConfig = {
 };
 
 export default function WorkflowPage() {
+  const { user } = useAuth();
   const [activeFilter, setActiveFilter] = useState<string>("all");
   const [selectedItem, setSelectedItem] = useState<WorkflowItem | null>(null);
+  const [workflowItems, setWorkflowItems] = useState<WorkflowItem[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  const userName = user?.email?.split("@")[0] || "User";
+
+  useEffect(() => {
+    async function fetchPosts() {
+      if (!user) {
+        setLoading(false);
+        return;
+      }
+      
+      try {
+        const { data, error } = await supabase
+          .from("posts")
+          .select("*")
+          .eq("user_id", user.id)
+          .order("created_at", { ascending: false });
+
+        if (!error && data) {
+          const items = data.map((post: any) => ({
+            id: post.id,
+            title: post.content.substring(0, 50) + (post.content.length > 50 ? "..." : ""),
+            content: post.content,
+            platform: post.platforms?.[0] || "linkedin",
+            status: post.status as WorkflowItem["status"],
+            assignee: userName,
+            createdAt: new Date(post.created_at).toLocaleDateString(),
+            updatedAt: new Date(post.updated_at).toLocaleDateString(),
+          }));
+          setWorkflowItems(items);
+        }
+      } catch (err) {
+        console.error("Error fetching posts:", err);
+      }
+      setLoading(false);
+    }
+
+    fetchPosts();
+  }, [user, userName]);
 
   const filteredItems = workflowItems.filter((item) => {
     if (activeFilter === "all") return true;

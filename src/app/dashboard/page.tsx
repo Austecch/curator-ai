@@ -34,22 +34,15 @@ const chartData = [
   { label: "Sun", value: 78, height: "75%" },
 ];
 
-const stats = [
-  { label: "Total Reach", value: "1.2M", change: "+12.4%", trend: "up" },
-  { label: "Engagements", value: "89.5k", change: "+8.2%", trend: "up" },
-  { label: "Posts This Month", value: "24", change: "+3", trend: "up" },
-  { label: "Active Platforms", value: "8", change: "", trend: "neutral" },
-];
-
 export default function DashboardPage() {
   const { user, profile, isAuthenticated, loading: authLoading } = useAuth();
   const { posts, loading: postsLoading } = usePosts(user?.id || null);
   const { platforms, activePlatformsCount, loading: platformsLoading } = usePlatforms(user?.id || null);
   const { unreadCount } = useNotifications(user?.id || null);
 
-  const loading = authLoading;
+  const loading = authLoading || postsLoading || platformsLoading;
 
-  if (authLoading) {
+  if (loading) {
     return (
       <DashboardShell>
         <div className="flex items-center justify-center min-h-[400px]">
@@ -62,7 +55,7 @@ export default function DashboardPage() {
     );
   }
 
-  if (!isAuthenticated) {
+  if (!isAuthenticated && !authLoading) {
     if (typeof window !== 'undefined') {
       window.location.href = '/login';
     }
@@ -79,6 +72,15 @@ export default function DashboardPage() {
     .filter((post) => post.status === "scheduled")
     .slice(0, 3);
 
+  const userName = profile?.full_name || user?.email?.split("@")[0] || "User";
+  
+  const stats = [
+    { label: "Total Posts", value: posts.length.toString(), change: "", trend: "neutral" as const },
+    { label: "Published", value: posts.filter(p => p.status === "published").length.toString(), change: "", trend: "neutral" as const },
+    { label: "Scheduled", value: posts.filter(p => p.status === "scheduled").length.toString(), change: "", trend: "neutral" as const },
+    { label: "Active Platforms", value: activePlatformsCount.toString(), change: "", trend: "neutral" as const },
+  ];
+
   return (
     <DashboardShell>
       <section className="mb-10">
@@ -90,7 +92,7 @@ export default function DashboardPage() {
             "Loading your dashboard..."
           ) : (
             <>
-              Welcome back, {profile?.full_name || user?.email?.split("@")[0] || "User"}.{" "}
+              Welcome back, {userName}.{" "}
               {unreadCount > 0 && (
                 <span className="text-[#005cbb] font-bold">{unreadCount} updates</span>
               )} pending review.
@@ -104,11 +106,11 @@ export default function DashboardPage() {
           <div className="flex justify-between items-end mb-8">
             <div>
               <span className="text-[10px] uppercase tracking-widest text-[#5b5f6b] font-bold">
-                Total Reach
+                Your Content
               </span>
               <h3 className="text-4xl font-extrabold tracking-tight mt-1">
-                1.2M{" "}
-                <span className="text-sm font-bold text-[#005cbb] ml-2">+12.4%</span>
+                {posts.length}{" "}
+                <span className="text-sm font-bold text-[#5b5f6b] ml-2">posts</span>
               </h3>
             </div>
             <div className="flex gap-2">

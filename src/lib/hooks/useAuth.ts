@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, usePathname } from "next/navigation";
 import { supabase } from "@/lib/database";
 import type { User, Session } from "@supabase/supabase-js";
 import type { Profile } from "@/types";
@@ -23,55 +23,54 @@ export function useAuth() {
     error: null,
   });
   const router = useRouter();
+  const pathname = usePathname();
 
   const fetchProfile = useCallback(async (userId: string) => {
-    const { data } = await supabase
-      .from("profiles")
-      .select("*")
-      .eq("id", userId)
-      .single();
-    return data as Profile | null;
+    try {
+      const { data } = await supabase
+        .from("profiles")
+        .select("*")
+        .eq("id", userId)
+        .single();
+      return data as Profile | null;
+    } catch (error) {
+      console.error("Error fetching profile:", error);
+      return null;
+    }
   }, []);
 
   useEffect(() => {
-    if (typeof window === 'undefined') return;
-    
+    let mounted = true;
+
     const initAuth = async () => {
       try {
-        const { data: { session }, error } = await supabase.auth.getSession();
+        const { data: { session } } = await supabase.auth.getSession();
         
-        if (error) {
-          console.error("Auth session error:", error);
-          setState(prev => ({ ...prev, loading: false }));
-          return;
-        }
-        
+        if (!mounted) return;
+
         if (session?.user) {
-          try {
-            const profile = await fetchProfile(session.user.id);
-            setState({
-              user: session.user,
-              session,
-              profile,
-              loading: false,
-              error: null,
-            });
-          } catch (profileError) {
-            console.error("Profile fetch error:", profileError);
-            setState({
-              user: session.user,
-              session,
-              profile: null,
-              loading: false,
-              error: null,
-            });
-          }
+          const profile = await fetchProfile(session.user.id);
+          setState({
+            user: session.user,
+            session,
+            profile,
+            loading: false,
+            error: null,
+          });
         } else {
-          setState(prev => ({ ...prev, loading: false }));
+          setState({
+            user: null,
+            session: null,
+            profile: null,
+            loading: false,
+            error: null,
+          });
         }
       } catch (error) {
         console.error("Auth init error:", error);
-        setState(prev => ({ ...prev, loading: false }));
+        if (mounted) {
+          setState(prev => ({ ...prev, loading: false }));
+        }
       }
     };
 
@@ -79,25 +78,17 @@ export function useAuth() {
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
+        if (!mounted) return;
+        
         if (session?.user) {
-          try {
-            const profile = await fetchProfile(session.user.id);
-            setState({
-              user: session.user,
-              session,
-              profile,
-              loading: false,
-              error: null,
-            });
-          } catch {
-            setState({
-              user: session.user,
-              session,
-              profile: null,
-              loading: false,
-              error: null,
-            });
-          }
+          const profile = await fetchProfile(session.user.id);
+          setState({
+            user: session.user,
+            session,
+            profile,
+            loading: false,
+            error: null,
+          });
         } else {
           setState({
             user: null,
@@ -110,11 +101,14 @@ export function useAuth() {
       }
     );
 
-    return () => subscription.unsubscribe();
+    return () => {
+      mounted = false;
+      subscription.unsubscribe();
+    };
   }, [fetchProfile]);
 
-  const signIn = async (email: string, password: string) => {
-    setState((prev) => ({ ...prev, loading: true, error: null }));
+  const signIn = useCallback(async (email: string, password: string) => {
+    setState(prev => ({ ...prev, loading: true, error: null }));
     
     const { data, error } = await supabase.auth.signInWithPassword({
       email,
@@ -122,7 +116,7 @@ export function useAuth() {
     });
 
     if (error) {
-      setState((prev) => ({ ...prev, loading: false, error: error as Error }));
+      setState(prev => ({ ...prev, loading: false, error: error as Error }));
       return { error };
     }
 
@@ -138,10 +132,10 @@ export function useAuth() {
     }
 
     return { error: null };
-  };
+  }, [fetchProfile]);
 
-  const signUp = async (email: string, password: string, fullName: string) => {
-    setState((prev) => ({ ...prev, loading: true, error: null }));
+  const signUp = useCallback(async (email: string, password: string, fullName: string) => {
+    setState(prev => ({ ...prev, loading: true, error: null }));
     
     const { data, error } = await supabase.auth.signUp({
       email,
@@ -154,20 +148,20 @@ export function useAuth() {
     });
 
     if (error) {
-      setState((prev) => ({ ...prev, loading: false, error: error as Error }));
+      setState(prev => ({ ...prev, loading: false, error: error as Error }));
       return { error };
     }
 
     return { error: null };
-  };
+  }, []);
 
-  const signOut = async () => {
+  const signOut = useCallback(async () => {
     const { error } = await supabase.auth.signOut();
     if (!error) {
       router.push("/login");
     }
     return { error };
-  };
+  }, [router]);
 
   return {
     ...state,

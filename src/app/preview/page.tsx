@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { DashboardShell } from "@/components/layout";
 import { Card, Button, Badge } from "@/components/ui";
+import { useAuth } from "@/lib/hooks/useAuth";
 import {
   Smartphone,
   Monitor,
@@ -27,7 +28,11 @@ const platforms = [
 ];
 
 export default function PreviewPage() {
+  const { user } = useAuth();
   const [selectedPlatform, setSelectedPlatform] = useState("instagram");
+  
+  const userName = user?.email?.split("@")[0] || "User";
+  const userInitial = userName.charAt(0).toUpperCase();
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [showEngagement, setShowEngagement] = useState(false);
 
@@ -194,7 +199,7 @@ export default function PreviewPage() {
                     AR
                   </div>
                   <div className="flex-1">
-                    <p className="font-bold">Alex Rivers</p>
+                    <p className="font-bold">{userName}</p>
                     <p className="text-xs text-[#5b5f6b]">Product Manager at Company</p>
                     <p className="text-xs text-[#5b5f6b]">1h</p>
                   </div>
@@ -239,7 +244,7 @@ export default function PreviewPage() {
                     AR
                   </div>
                   <div className="flex-1">
-                    <p className="font-bold">Alex Rivers</p>
+                    <p className="font-bold">{userName}</p>
                     <p className="text-xs text-[#5b5f6b]">2h • 🌴</p>
                   </div>
                   <button className="text-[#5b5f6b]">...</button>
