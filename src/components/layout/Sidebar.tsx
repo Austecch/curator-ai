@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useAuth } from "@/lib/hooks/useAuth";
 import {
   LayoutDashboard,
   PlusCircle,
@@ -51,6 +52,7 @@ const settingsNavigation = [
 
 export function Sidebar() {
   const pathname = usePathname();
+  const { user } = useAuth();
 
   return (
     <aside
@@ -134,10 +136,12 @@ export function Sidebar() {
           className="flex items-center gap-3 px-2 mt-6 hover:bg-[#f3f3fb] rounded-xl py-2 transition-colors"
         >
           <div className="w-10 h-10 rounded-full bg-[#d7e2ff] flex items-center justify-center text-sm font-bold text-[#005cbb]">
-            AR
+            {user?.email ? user.email.charAt(0).toUpperCase() : "U"}
           </div>
           <div className="flex-1">
-            <span className="text-xs font-bold block">Alex Rivers</span>
+            <span className="text-xs font-bold block">
+              {user?.email?.split("@")[0] || "User"}
+            </span>
             <span className="text-[10px] text-[#5b5f6b]">View Profile</span>
           </div>
         </Link>
