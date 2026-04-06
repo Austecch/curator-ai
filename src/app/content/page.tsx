@@ -186,8 +186,8 @@ export default function ContentPage() {
                 <span className="text-[10px] text-[#5b5f6b]">
                   {post.published_at
                     ? `Published ${new Date(post.published_at).toLocaleDateString()}`
-                    : post.scheduledAt
-                    ? `Scheduled ${new Date(post.scheduledAt).toLocaleDateString()}`
+                    : post.scheduled_at
+                    ? `Scheduled ${new Date(post.scheduled_at).toLocaleDateString()}`
                     : "Draft"}
                 </span>
                 <div className="flex items-center gap-1">
@@ -238,8 +238,8 @@ export default function ContentPage() {
                 <div className="w-32 text-sm text-[#5b5f6b]">
                   {post.published_at
                     ? new Date(post.published_at).toLocaleDateString()
-                    : post.scheduledAt
-                    ? new Date(post.scheduledAt).toLocaleDateString()
+                    : post.scheduled_at
+                    ? new Date(post.scheduled_at).toLocaleDateString()
                     : "-"}
                 </div>
 
