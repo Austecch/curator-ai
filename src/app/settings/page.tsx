@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { DashboardShell } from "@/components/layout";
 import { Card, Button, Badge } from "@/components/ui";
+import { useAuth } from "@/lib/hooks/useAuth";
 import {
   User,
   Mail,
@@ -35,9 +36,10 @@ const plans = [
 ];
 
 export default function SettingsPage() {
+  const { user, profile } = useAuth();
   const [activeTab, setActiveTab] = useState("profile");
-  const [fullName, setFullName] = useState("Alex Rivers");
-  const [email, setEmail] = useState("alex@example.com");
+  const [fullName, setFullName] = useState(profile?.full_name || user?.email?.split("@")[0] || "");
+  const [email, setEmail] = useState(user?.email || "");
   const [timezone, setTimezone] = useState("America/New_York");
   const [language, setLanguage] = useState("en");
   const [isSaving, setIsSaving] = useState(false);
@@ -311,10 +313,11 @@ export default function SettingsPage() {
                 </Button>
               </div>
               <div className="space-y-4">
-                {[
-                  { name: "Alex Rivers", email: "alex@example.com", role: "Owner" },
-                  { name: "Sarah Chen", email: "sarah@company.com", role: "Editor" },
-                ].map((member, index) => (
+                {[{
+                  name: user?.email?.split("@")[0] || "User",
+                  email: user?.email || "",
+                  role: "Owner"
+                }].map((member, index) => (
                   <div key={index} className="flex items-center justify-between p-4 bg-[#f3f3fb] rounded-xl">
                     <div className="flex items-center gap-4">
                       <div className="w-10 h-10 rounded-full bg-[#d7e2ff] flex items-center justify-center font-bold text-[#005cbb]">
