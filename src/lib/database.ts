@@ -3,14 +3,23 @@ import type { Post, Platform, Notification, Profile, AISettings, ScheduledPost }
 
 let _supabase: SupabaseClient | null = null;
 
+function createDummyClient(): SupabaseClient {
+  const dummyClient = createClient("https://placeholder.supabase.co", "placeholder-key");
+  return dummyClient;
+}
+
 export function getSupabase(): SupabaseClient {
+  if (typeof window === 'undefined') {
+    return createDummyClient();
+  }
   if (!_supabase) {
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "";
-    const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "";
-    if (!supabaseUrl || !supabaseAnonKey) {
-      throw new Error("Missing Supabase environment variables");
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+    if (supabaseUrl && supabaseAnonKey) {
+      _supabase = createClient(supabaseUrl, supabaseAnonKey);
+    } else {
+      _supabase = createDummyClient();
     }
-    _supabase = createClient(supabaseUrl, supabaseAnonKey);
   }
   return _supabase;
 }
@@ -25,17 +34,18 @@ let _supabaseAdmin: SupabaseClient | null = null;
 
 export function getSupabaseAdmin(): SupabaseClient {
   if (!_supabaseAdmin) {
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "";
-    const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY || "";
-    if (!supabaseUrl || !serviceRoleKey) {
-      throw new Error("Missing Supabase admin environment variables");
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+    if (supabaseUrl && serviceRoleKey) {
+      _supabaseAdmin = createClient(supabaseUrl, serviceRoleKey, {
+        auth: {
+          autoRefreshToken: false,
+          persistSession: false,
+        },
+      });
+    } else {
+      _supabaseAdmin = createDummyClient();
     }
-    _supabaseAdmin = createClient(supabaseUrl, serviceRoleKey, {
-      auth: {
-        autoRefreshToken: false,
-        persistSession: false,
-      },
-    });
   }
   return _supabaseAdmin;
 }

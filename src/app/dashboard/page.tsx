@@ -49,6 +49,13 @@ export default function DashboardPage() {
 
   const loading = authLoading || postsLoading || platformsLoading;
 
+  if (!loading && !isAuthenticated) {
+    if (typeof window !== 'undefined') {
+      window.location.href = '/login';
+    }
+    return null;
+  }
+
   const upcomingPosts = posts
     .filter((post) => post.status === "scheduled")
     .slice(0, 3);
