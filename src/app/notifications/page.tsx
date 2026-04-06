@@ -171,10 +171,10 @@ export default function NotificationsPage() {
                   key={notification.id}
                   className={cn(
                     "p-5 transition-all",
-                    !notification.read && "border-l-4"
+                    !notification.is_read && "border-l-4"
                   )}
                   style={{
-                    borderLeftColor: !notification.read ? color : undefined,
+                    borderLeftColor: !notification.is_read ? color : undefined,
                   }}
                 >
                   <div className="flex items-start gap-4">
