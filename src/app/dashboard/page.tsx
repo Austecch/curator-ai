@@ -34,6 +34,8 @@ const chartData = [
   { label: "Sun", value: 78, height: "75%" },
 ];
 
+type Trend = "up" | "down" | "neutral";
+
 export default function DashboardPage() {
   const { user, profile, isAuthenticated, loading: authLoading } = useAuth();
   const { posts, loading: postsLoading } = usePosts(user?.id || null);
@@ -74,11 +76,11 @@ export default function DashboardPage() {
 
   const userName = profile?.full_name || user?.email?.split("@")[0] || "User";
   
-  const stats = [
-    { label: "Total Posts", value: posts.length.toString(), change: "", trend: "neutral" as const },
-    { label: "Published", value: posts.filter(p => p.status === "published").length.toString(), change: "", trend: "neutral" as const },
-    { label: "Scheduled", value: posts.filter(p => p.status === "scheduled").length.toString(), change: "", trend: "neutral" as const },
-    { label: "Active Platforms", value: activePlatformsCount.toString(), change: "", trend: "neutral" as const },
+  const stats: { label: string; value: string; change: string; trend: Trend }[] = [
+    { label: "Total Posts", value: posts.length.toString(), change: "", trend: "neutral" },
+    { label: "Published", value: posts.filter(p => p.status === "published").length.toString(), change: "", trend: "neutral" },
+    { label: "Scheduled", value: posts.filter(p => p.status === "scheduled").length.toString(), change: "", trend: "neutral" },
+    { label: "Active Platforms", value: activePlatformsCount.toString(), change: "", trend: "neutral" },
   ];
 
   return (
