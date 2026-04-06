@@ -1,21 +1,50 @@
-import { createClient } from "@supabase/supabase-js";
-import type { Post, Platform, Notification, User, AISettings, ScheduledPost } from "@/types";
+import { createClient, SupabaseClient } from "@supabase/supabase-js";
+import type { Post, Platform, Notification, Profile, AISettings, ScheduledPost } from "@/types";
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "";
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "";
+let _supabase: SupabaseClient | null = null;
 
-export const supabase = createClient(supabaseUrl, supabaseAnonKey);
-
-export const supabaseAdmin = createClient(
-  supabaseUrl,
-  process.env.SUPABASE_SERVICE_ROLE_KEY || "",
-  {
-    auth: {
-      autoRefreshToken: false,
-      persistSession: false,
-    },
+export function getSupabase(): SupabaseClient {
+  if (!_supabase) {
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "";
+    const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "";
+    if (!supabaseUrl || !supabaseAnonKey) {
+      throw new Error("Missing Supabase environment variables");
+    }
+    _supabase = createClient(supabaseUrl, supabaseAnonKey);
   }
-);
+  return _supabase;
+}
+
+export const supabase = new Proxy({} as SupabaseClient, {
+  get(_target, prop) {
+    return (getSupabase() as any)[prop];
+  },
+});
+
+let _supabaseAdmin: SupabaseClient | null = null;
+
+export function getSupabaseAdmin(): SupabaseClient {
+  if (!_supabaseAdmin) {
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "";
+    const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY || "";
+    if (!supabaseUrl || !serviceRoleKey) {
+      throw new Error("Missing Supabase admin environment variables");
+    }
+    _supabaseAdmin = createClient(supabaseUrl, serviceRoleKey, {
+      auth: {
+        autoRefreshToken: false,
+        persistSession: false,
+      },
+    });
+  }
+  return _supabaseAdmin;
+}
+
+export const supabaseAdmin = new Proxy({} as SupabaseClient, {
+  get(_target, prop) {
+    return (getSupabaseAdmin() as any)[prop];
+  },
+});
 
 // Auth Helpers
 export async function signUp(email: string, password: string, fullName: string) {
@@ -66,7 +95,7 @@ export async function getProfile(userId: string) {
   return { data, error };
 }
 
-export async function updateProfile(userId: string, updates: Partial<User>) {
+export async function updateProfile(userId: string, updates: Partial<Profile>) {
   const { data, error } = await supabase
     .from("profiles")
     .update(updates)

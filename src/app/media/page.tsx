@@ -103,7 +103,7 @@ const folders = [
 export default function MediaLibraryPage() {
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
   const [searchQuery, setSearchQuery] = useState("");
-  const [filter, setFilter] = useState<"all" | "images" | "videos">("all");
+  const [filter, setFilter] = useState<"all" | "image" | "video">("all");
   const [selectedItems, setSelectedItems] = useState<string[]>([]);
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -218,7 +218,7 @@ export default function MediaLibraryPage() {
                 />
               </div>
               <div className="flex bg-[#f3f3fb] rounded-xl p-1">
-                {(["all", "images", "videos"] as const).map((f) => (
+                {(["all", "image", "video"] as const).map((f) => (
                   <button
                     key={f}
                     onClick={() => setFilter(f)}
@@ -229,7 +229,7 @@ export default function MediaLibraryPage() {
                         : "text-[#5b5f6b] hover:text-[#2e323d]"
                     )}
                   >
-                    {f}
+                    {f === "all" ? "All" : f + "s"}
                   </button>
                 ))}
               </div>

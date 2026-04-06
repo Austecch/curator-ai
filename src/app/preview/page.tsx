@@ -15,6 +15,7 @@ import {
   RefreshCw,
   Maximize2,
   X,
+  Play,
 } from "lucide-react";
 import { cn, formatNumber } from "@/lib/utils";
 

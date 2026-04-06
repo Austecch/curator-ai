@@ -3,6 +3,8 @@ import "./globals.css";
 import { ThemeProvider } from "@/components/providers/ThemeProvider";
 import { AuthProvider } from "@/components/providers/AuthProvider";
 
+export const dynamic = "force-dynamic";
+
 export const metadata: Metadata = {
   title: "Curator AI - Social Media Management",
   description: "AI-powered social media management platform for creating, scheduling, and analyzing content across multiple platforms.",

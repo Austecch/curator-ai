@@ -22,7 +22,18 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-const allPlatforms = [
+interface Platform {
+  id: string;
+  name: string;
+  description: string;
+  icon: typeof Briefcase;
+  color: string;
+  connected: boolean;
+  followers: string | null;
+  connectedAt: string | null;
+}
+
+const allPlatforms: Platform[] = [
   {
     id: "linkedin",
     name: "LinkedIn",
