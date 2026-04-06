@@ -100,13 +100,17 @@ export async function GET(request: Request) {
     connected_platforms: platforms?.length || 0,
     weekly_data: weeklyData,
     platform_breakdown: platformBreakdown,
-    top_posts: publishedPosts.slice(0, 5).map((post) => ({
-      content: post.content.slice(0, 60) + "...",
-      platform: post.platforms?.[0] || "unknown",
-      reach: postCount > 0 ? 5000 : 0,
-      engagements: postCount > 0 ? 200 : 0,
-      ctr: postCount > 0 ? 3.5 : 0,
-    })),
+    top_posts: publishedPosts.slice(0, 5).map((post) => {
+      const postPlatform = post.platforms?.[0] || "unknown";
+      const postCount = publishedPosts.filter(p => p.platforms?.includes(postPlatform)).length;
+      return {
+        content: post.content.slice(0, 60) + "...",
+        platform: postPlatform,
+        reach: postCount > 0 ? 5000 : 0,
+        engagements: postCount > 0 ? 200 : 0,
+        ctr: postCount > 0 ? 3.5 : 0,
+      };
+    }),
   };
 
   return NextResponse.json(analytics);
