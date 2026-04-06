@@ -9,7 +9,13 @@ function createSupabase(): SupabaseClient {
     console.warn("Supabase credentials not configured, using placeholder");
     return createClient("https://placeholder.supabase.co", "placeholder-key");
   }
-  return createClient(supabaseUrl, supabaseAnonKey);
+  return createClient(supabaseUrl, supabaseAnonKey, {
+    auth: {
+      persistSession: true,
+      autoRefreshToken: true,
+      detectSessionInUrl: true,
+    },
+  });
 }
 
 export const supabase = createSupabase();
