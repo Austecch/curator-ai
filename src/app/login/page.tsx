@@ -34,7 +34,7 @@ export default function LoginPage() {
         setError(signInError.message);
         setLoading(false);
       } else if (data.user) {
-        router.push("/dashboard");
+        window.location.href = "/dashboard";
       }
     } catch {
       setError("An unexpected error occurred");
