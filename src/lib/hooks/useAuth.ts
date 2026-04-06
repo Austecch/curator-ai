@@ -34,19 +34,15 @@ export function useAuth() {
   }, []);
 
   useEffect(() => {
+    if (typeof window === 'undefined') return;
+    
     const initAuth = async () => {
       try {
         const { data: { session }, error } = await supabase.auth.getSession();
         
         if (error) {
           console.error("Auth session error:", error);
-          setState({
-            user: null,
-            session: null,
-            profile: null,
-            loading: false,
-            error: null,
-          });
+          setState(prev => ({ ...prev, loading: false }));
           return;
         }
         
@@ -71,23 +67,11 @@ export function useAuth() {
             });
           }
         } else {
-          setState({
-            user: null,
-            session: null,
-            profile: null,
-            loading: false,
-            error: null,
-          });
+          setState(prev => ({ ...prev, loading: false }));
         }
       } catch (error) {
         console.error("Auth init error:", error);
-        setState({
-          user: null,
-          session: null,
-          profile: null,
-          loading: false,
-          error: null,
-        });
+        setState(prev => ({ ...prev, loading: false }));
       }
     };
 

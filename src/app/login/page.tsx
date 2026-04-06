@@ -5,25 +5,35 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Button, Input, Card } from "@/components/ui";
 import { Sparkles, ArrowRight, AlertCircle } from "lucide-react";
-import { useAuth } from "@/lib/hooks/useAuth";
+import { supabase } from "@/lib/database";
 
 export default function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
   const router = useRouter();
-  const { signIn, loading } = useAuth();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
+    setLoading(true);
 
-    const { error } = await signIn(email, password);
-    
-    if (error) {
-      setError(error.message || "Failed to sign in");
-    } else {
-      router.push("/dashboard");
+    try {
+      const { data, error: signInError } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
+      
+      if (signInError) {
+        setError(signInError.message || "Failed to sign in");
+        setLoading(false);
+      } else if (data.user) {
+        router.push("/dashboard");
+      }
+    } catch (err) {
+      setError("An unexpected error occurred");
+      setLoading(false);
     }
   };
 
