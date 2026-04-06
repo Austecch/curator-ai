@@ -1,33 +1,24 @@
 import { createClient, SupabaseClient } from "@supabase/supabase-js";
 import type { Post, Platform, Notification, Profile, AISettings, ScheduledPost } from "@/types";
 
-let _supabase: SupabaseClient | null = null;
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "";
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "";
 
-export function getSupabase(): SupabaseClient {
-  if (!_supabase) {
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-    const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-    if (supabaseUrl && supabaseAnonKey) {
-      _supabase = createClient(supabaseUrl, supabaseAnonKey);
-    } else {
-      throw new Error("Missing Supabase environment variables");
-    }
+function createSupabase(): SupabaseClient {
+  if (!supabaseUrl || !supabaseAnonKey) {
+    console.warn("Supabase credentials not configured, using placeholder");
+    return createClient("https://placeholder.supabase.co", "placeholder-key");
   }
-  return _supabase;
+  return createClient(supabaseUrl, supabaseAnonKey);
 }
 
-export const supabase = new Proxy({} as SupabaseClient, {
-  get(_target, prop) {
-    return (getSupabase() as any)[prop];
-  },
-});
+export const supabase = createSupabase();
 
 let _supabaseAdmin: SupabaseClient | null = null;
 
 export function getSupabaseAdmin(): SupabaseClient {
   if (!_supabaseAdmin) {
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-    const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+    const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY || "";
     if (supabaseUrl && serviceRoleKey) {
       _supabaseAdmin = createClient(supabaseUrl, serviceRoleKey, {
         auth: {
@@ -36,17 +27,12 @@ export function getSupabaseAdmin(): SupabaseClient {
         },
       });
     } else {
-      throw new Error("Missing Supabase admin environment variables");
+      console.warn("Supabase admin credentials not configured");
+      _supabaseAdmin = createClient("https://placeholder.supabase.co", "placeholder-key");
     }
   }
   return _supabaseAdmin;
 }
-
-export const supabaseAdmin = new Proxy({} as SupabaseClient, {
-  get(_target, prop) {
-    return (getSupabaseAdmin() as any)[prop];
-  },
-});
 
 // Auth Helpers
 export async function signUp(email: string, password: string, fullName: string) {

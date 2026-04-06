@@ -1,15 +1,18 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { Button, Input, Card } from "@/components/ui";
 import { Sparkles, ArrowRight, AlertCircle } from "lucide-react";
+import { supabase } from "@/lib/database";
 
 export default function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const router = useRouter();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -22,22 +25,19 @@ export default function LoginPage() {
     setError("");
 
     try {
-      const response = await fetch("/api/auth/login", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, password }),
+      const { data, error: signInError } = await supabase.auth.signInWithPassword({
+        email,
+        password,
       });
 
-      const data = await response.json();
-      
-      if (!response.ok) {
-        setError(data.error || "Failed to sign in");
+      if (signInError) {
+        setError(signInError.message);
         setLoading(false);
-      } else {
-        window.location.href = "/dashboard";
+      } else if (data.user) {
+        router.push("/dashboard");
       }
     } catch {
-      setError("Network error. Please try again.");
+      setError("An unexpected error occurred");
       setLoading(false);
     }
   };
